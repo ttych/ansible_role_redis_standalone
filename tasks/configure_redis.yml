@@ -1,0 +1,99 @@
+---
+
+- block:
+    - name: save redis_standalone_password
+      copy:
+        content: "{{ redis_standalone_password }}"
+        dest: "{{ redis_standalone_password_file }}"
+        mode: "0600"
+        owner: "{{ redis_standalone_admin_user }}"
+        group: "{{ redis_standalone_group }}"
+
+  when: redis_standalone_password is defined
+
+- block:
+    - name: check redis_standalone_password_save file
+      stat:
+        path: "{{ redis_standalone_password_file }}"
+      register: t_redis_standalone_password_save
+
+    - block:
+        - name: generate redis password
+          command: apg -m 30 -n 1
+          register: t_redis_standalone_password
+
+        - name: save to redis_standalone_password_save
+          copy:
+            content: "{{ t_redis_standalone_password.stdout }}"
+            dest: "{{ redis_standalone_password_file }}"
+            mode: "0600"
+            owner: "{{ redis_standalone_admin_user }}"
+            group: "{{ redis_standalone_group }}"
+      when: not t_redis_standalone_password_save.stat.exists
+
+    - name: reload redis_standalone_password
+      command: " cat {{ redis_standalone_password_file }}"
+      changed_when: no
+      register: t_redis_standalone_password
+
+    - name: set redis_standalone_password
+      set_fact:
+        redis_standalone_password: "{{ t_redis_standalone_password.stdout }}"
+
+  when: redis_standalone_password is not defined
+
+
+- block:
+
+    - name: deploy tls cert
+      copy:
+        dest: "{{ redis_standalone_conf_tls_cert_file }}"
+        content: "{{ redis_standalone_conf_tls_cert }}"
+        owner: "{{ redis_standalone_admin_user }}"
+        group: "{{ redis_standalone_group }}"
+        mode: "0640"
+
+    - name: deploy tls key
+      copy:
+        dest: "{{ redis_standalone_conf_tls_key_file }}"
+        content: "{{ redis_standalone_conf_tls_key }}"
+        owner: "{{ redis_standalone_admin_user }}"
+        group: "{{ redis_standalone_group }}"
+        mode: "0640"
+
+    - name: deploy tls key pass
+      copy:
+        dest: "{{ redis_standalone_conf_tls_key_pass_file }}"
+        content: "{{ redis_standalone_conf_tls_key_pass }}"
+        owner: "{{ redis_standalone_admin_user }}"
+        group: "{{ redis_standalone_group }}"
+        mode: "0640"
+      when:
+        - redis_standalone_conf_tls_key_pass
+        - redis_standalone_conf_tls_key_pass_file
+
+  when:
+    - redis_standalone_conf_tls_cert
+    - redis_standalone_conf_tls_key
+
+- block:
+
+    - name: deploy CA cert
+      copy:
+        dest: "{{ redis_standalone_conf_tls_ca_cert_file }}"
+        content: "{{ redis_standalone_conf_tls_ca_cert }}"
+        owner: "{{ redis_standalone_admin_user }}"
+        group: "{{ redis_standalone_group }}"
+        mode: "0640"
+
+  when: redis_standalone_conf_tls_ca_cert
+
+
+- name: deploy redis.conf
+  template:
+    src: conf/redis.conf
+    dest: "{{ redis_standalone_conf }}"
+    owner: "{{ redis_standalone_admin_user }}"
+    group: "{{ redis_standalone_group }}"
+    mode: "0640"
+  register: t_redis_standalone_conf_deploy

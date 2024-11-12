@@ -1,0 +1,174 @@
+---
+
+- block:
+
+    - name: install built packages
+      package:
+        name: "{{ redis_standalone_packages }}"
+        state: latest
+
+    - name: set redis binaries
+      set_fact:
+        redis_standalone_redis_server_bin: /usr/bin/redis-server
+        redis_standalone_redis_cli_bin: /usr/bin/redis-cli
+
+  when: redis_standalone_use_package
+
+
+- block:
+
+    - name: install packages to build
+      package:
+        name: "{{ redis_standalone_build_packages }}"
+        state: latest
+
+    - name: prepare clean tmp
+      find:
+        paths: "{{ redis_standalone_tmp_dir }}"
+        file_type: any
+        recurse: no
+      register: t_redis_standalone_tmp_to_delete
+
+    - name: clean tmp
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ t_redis_standalone_tmp_to_delete.files }}"
+      changed_when: no
+
+    - block:
+
+        - name: download redis stable
+          get_url:
+            url: "{{ redis_standalone_build_stable_archive_url }}"
+            dest: "{{ redis_standalone_distfiles_dir }}/{{ redis_standalone_build_stable_archive }}"
+            owner: "{{ redis_standalone_admin_user }}"
+            group: "{{ redis_standalone_group }}"
+            mode: "0644"
+
+        - name: extract archive
+          unarchive:
+            remote_src: yes
+            src: "{{ redis_standalone_distfiles_dir }}/{{ redis_standalone_build_stable_archive }}"
+            dest: "{{ redis_standalone_tmp_dir }}"
+            mode: "go-w"
+            owner: "{{ redis_standalone_admin_user }}"
+            group: "{{ redis_standalone_group }}"
+          changed_when: no
+
+        - name: set build source
+          set_fact:
+            t_redis_standalone_build_source: "{{ redis_standalone_tmp_dir }}/{{ redis_standalone_build_stable_release }}"
+
+        - name: extract version
+          command:
+            cmd: sed -n -e 's/^#define REDIS_VERSION "\([0-9.]*\)"/\1/p' ./src/version.h
+          args:
+            chdir: "{{ t_redis_standalone_build_source }}"
+          changed_when: no
+          register: t_redis_standalone_stable_version
+
+        - name: set version
+          set_fact:
+            redis_standalone_build_version: "{{ t_redis_standalone_stable_version.stdout | trim }}"
+
+      when: redis_standalone_build_use_stable
+
+
+    - name: check redis install
+      stat:
+        path: "{{ redis_standalone_dir }}/{{ redis_standalone_build_release }}/bin/redis-server"
+      register: t_redis_standalone_installed_raw
+
+    - block:
+        - name: get redis version
+          shell: "{{ redis_standalone_dir }}/{{ redis_standalone_build_release }}/bin/redis-server --version | cut -d ' ' -f3 | cut -d = -f 2"
+          changed_when: no
+          register: t_redis_standalone_current_version
+
+        - name: set redis install status
+          set_fact:
+            t_redis_standalone_installed: "{{ t_redis_standalone_current_version.stdout is version(redis_standalone_build_version, '==') }}"
+
+      when: t_redis_standalone_installed_raw.stat.exists
+
+    - name: set redis install status
+      set_fact:
+        t_redis_standalone_installed: false
+      when: not t_redis_standalone_installed_raw.stat.exists
+
+
+    - block:
+
+        - name: download redis version
+          get_url:
+            url: "{{ redis_standalone_build_archive_url }}"
+            dest: "{{ redis_standalone_distfiles_dir }}/{{ redis_standalone_build_archive }}"
+            owner: "{{ redis_standalone_admin_user }}"
+            group: "{{ redis_standalone_group }}"
+            mode: "0644"
+
+        - name: extract archive
+          unarchive:
+            remote_src: yes
+            src: "{{ redis_standalone_distfiles_dir }}/{{redis_standalone_build_archive }}"
+            dest: "{{ redis_standalone_tmp_dir }}"
+            mode: "go-w"
+            owner: "{{ redis_standalone_admin_user }}"
+            group: "{{ redis_standalone_group }}"
+          changed_when: no
+
+        - name: set build source
+          set_fact:
+            t_redis_standalone_build_source: "{{ redis_standalone_tmp_dir }}/{{ redis_standalone_build_release }}"
+
+      when:
+        - not redis_standalone_build_use_stable
+        - not t_redis_standalone_installed
+
+
+    - block:
+
+        - name: build && install
+          shell: "(cd deps && {{ redis_standalone_build_make }} -j {{ redis_standalone_build_jobs }} hiredis  jemalloc linenoise lua) && {{ redis_standalone_build_make }} -j {{ redis_standalone_build_jobs }} BUILD_TLS=yes && {{ redis_standalone_build_make }} install PREFIX={{ redis_standalone_dir }}/{{ redis_standalone_build_release }}"
+          args:
+            chdir: "{{ t_redis_standalone_build_source }}"
+
+        - name: clean
+          file:
+            path: "{{ t_redis_standalone_build_source }}"
+            state: absent
+
+      when: not t_redis_standalone_installed
+
+    - name: link to active
+      file:
+        src: "{{ redis_standalone_dir }}/{{ redis_standalone_build_release }}"
+        dest: "{{ redis_standalone_build_active_path }}"
+        force: yes
+        state: link
+        owner: "{{ redis_standalone_admin_user }}"
+        group: "{{ redis_standalone_group }}"
+
+    - name: set redis binaries
+      set_fact:
+        redis_standalone_redis_server_bin: "{{ redis_standalone_build_active_path }}/bin/redis-server"
+        redis_standalone_redis_cli_bin: "{{ redis_standalone_build_active_path }}/bin/redis-cli"
+
+  when: not redis_standalone_use_package
+
+
+- name: get redis version
+  shell: "{{ redis_standalone_redis_server_bin }} --version | cut -d ' ' -f3 | cut -d = -f 2"
+  changed_when: no
+  register: t_redis_standalone_current_version
+
+- name: set redis version
+  set_fact:
+    redis_standalone_version: "{{t_redis_standalone_current_version.stdout }}"
+
+
+- name: install extra packages
+  package:
+    name: "{{ redis_standalone_extra_packages }}"
+    state: latest

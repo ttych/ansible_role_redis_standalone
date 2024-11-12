@@ -1,0 +1,5 @@
+---
+
+root_group: wheel
+
+sys_rc_d: /etc/rc.d

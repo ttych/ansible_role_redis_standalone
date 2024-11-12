@@ -1,0 +1,23 @@
+---
+
+- block:
+
+    - include_tasks: context.yml
+
+    - include_tasks: accounts.yml
+      vars:
+        accounts_groups: "{{ redis_standalone_groups }}"
+        accounts_users: "{{ redis_standalone_users }}"
+
+    - include_tasks: workspace.yml
+      vars:
+        workspace_fs: "{{ redis_standalone_dir }}"
+        workspace_directories: "{{ redis_standalone_directories }}"
+
+    - include_tasks: install_redis.yml
+
+    - include_tasks: configure_redis.yml
+
+    - include_tasks: service_redis.yml
+
+  when: want_redis_standalone

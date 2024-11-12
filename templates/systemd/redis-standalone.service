@@ -1,0 +1,21 @@
+[Unit]
+Description=redis standalone
+
+[Service]
+Type=notify
+User={{ redis_standalone_user }}
+Group={{ redis_standalone_group }}
+ExecStart={{ redis_standalone_redis_server_bin }} {{ redis_standalone_conf }} --supervised systemd
+ExecStop=/bin/kill -s TERM $MAINPID
+PIDFile={{ redis_standalone_pid_file }}
+RuntimeDirectory={{ redis_standalone_name }}
+TimeoutStopSec=2
+Restart=always
+StandardError=journal
+StandardOutput=journal
+StandardInput=null
+LimitNOFILE=65535
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

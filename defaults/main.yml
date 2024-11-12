@@ -1,0 +1,141 @@
+---
+
+want_redis_standalone: no
+
+redis_standalone_name: redis-standalone
+
+redis_standalone_user: redis
+redis_standalone_uid: 3109
+redis_standalone_group: "{{ redis_standalone_user }}"
+redis_standalone_gid: "{{ redis_standalone_uid }}"
+redis_standalone_homedir: "/home/{{ redis_standalone_user }}"
+redis_standalone_users:
+  - name: "{{ redis_standalone_user }}"
+    comment: "{{ redis_standalone_user }}"
+    group: "{{ redis_standalone_group }}"
+    home: "{{ redis_standalone_homedir }}"
+    shell: /bin/sh
+    uid: "{{ redis_standalone_uid }}"
+    home_mode: '0700'
+    password: '*'
+redis_standalone_groups:
+  - name: "{{ redis_standalone_group }}"
+    gid: "{{ redis_standalone_gid }}"
+
+redis_standalone_dir: "/app/{{ redis_standalone_name }}"
+
+redis_standalone_etc_dir: "{{ redis_standalone_dir }}/etc"
+redis_standalone_conf_dir: "{{ redis_standalone_dir }}/conf"
+redis_standalone_conf_fragments_dir: "{{ redis_standalone_conf_dir }}/fragments"
+redis_standalone_distfiles_dir: "{{ redis_standalone_dir }}/distfiles"
+redis_standalone_data_dir: "{{ redis_standalone_dir }}/data"
+redis_standalone_tmp_dir: "{{ redis_standalone_dir }}/tmp"
+
+redis_standalone_directories:
+  - path: "{{ redis_standalone_dir }}"
+    owner: "{{ redis_standalone_admin_user }}"
+    group: "{{ redis_standalone_group }}"
+    mode: "0750"
+  - path: "{{ redis_standalone_etc_dir }}"
+    owner: "{{ redis_standalone_admin_user }}"
+    group: "{{ redis_standalone_group }}"
+    mode: "0750"
+  - path: "{{ redis_standalone_conf_dir }}"
+    owner: "{{ redis_standalone_admin_user }}"
+    group: "{{ redis_standalone_group }}"
+    mode: "0750"
+  - path: "{{ redis_standalone_conf_fragments_dir }}"
+    owner: "{{ redis_standalone_admin_user }}"
+    group: "{{ redis_standalone_group }}"
+    mode: "0750"
+  - path: "{{ redis_standalone_data_dir }}"
+    owner: "{{ redis_standalone_user }}"
+    group: "{{ redis_standalone_group }}"
+    mode: "0750"
+  - path: "{{ redis_standalone_distfiles_dir }}"
+    owner: "{{ redis_standalone_admin_user }}"
+    group: "{{ redis_standalone_group }}"
+    mode: "0750"
+  - path: "{{ redis_standalone_tmp_dir }}"
+    owner: "{{ redis_standalone_admin_user }}"
+    group: "{{ redis_standalone_group }}"
+    mode: "0750"
+
+redis_standalone_password_file: "{{ redis_standalone_conf_dir }}/password"
+redis_standalone_conf: "{{ redis_standalone_conf_dir }}/redis.conf"
+redis_standalone_pid_file: "/var/run/{{ redis_standalone_name }}/{{ redis_standalone_service_name }}_{{ redis_standalone_conf_port }}.pid"
+redis_standalone_log_file: ""
+redis_standalone_db_dump_file: "dump.rdb"
+
+redis_standalone_use_package: yes
+
+redis_standalone_packages:
+  - redis
+  - redis-tools
+
+redis_standalone_build_packages: []
+
+redis_standalone_extra_packages:
+  - apg
+
+redis_standalone_build_version: 7.4.1
+redis_standalone_build_release: "redis-{{ redis_standalone_build_version }}"
+redis_standalone_build_archive: "{{ redis_standalone_build_release }}.tar.gz"
+redis_standalone_build_archive_url: "http://download.redis.io/releases/{{ redis_standalone_build_archive }}"
+
+redis_standalone_build_stable_release: "redis-stable"
+redis_standalone_build_stable_archive: "{{ redis_standalone_build_stable_release }}.tar.gz"
+redis_standalone_build_stable_archive_url: "http://download.redis.io/{{ redis_standalone_build_stable_archive }}"
+
+redis_standalone_build_use_stable: yes
+
+redis_standalone_build_jobs: "{{ ansible_processor_vcpus|d(ansible_processor_count) }}"
+redis_standalone_build_make: make
+
+redis_standalone_build_active_path: "{{ redis_standalone_dir }}/redis"
+redis_standalone_build_active_server_bin: "{{ redis_standalone_build_active_path }}/bin/redis-server"
+redis_standalone_build_active_cli_bin: "{{ redis_standalone_build_active_path }}/bin/redis-cli"
+
+redis_standalone_admin_user: admin
+
+redis_standalone_conf_base_url: "https://raw.githubusercontent.com/redis/redis/{{ redis_standalone_version }}/redis.conf"
+redis_standalone_conf_protected_mode: yes
+redis_standalone_conf_binds:
+  - 127.0.0.1
+  - -::1
+redis_standalone_conf_port: 6379
+redis_standalone_conf_tls_port: no
+redis_standalone_conf_timeout: 300
+redis_standalone_conf_tcp_keepaline: 300
+redis_standalone_conf_tls_cert: null
+redis_standalone_conf_tls_cert_file: "{{ redis_standalone_conf_dir }}/redis.crt"
+redis_standalone_conf_tls_key: null
+redis_standalone_conf_tls_key_file: "{{ redis_standalone_conf_dir }}/redis.key"
+redis_standalone_conf_tls_key_pass: null
+redis_standalone_conf_tls_key_pass_file: "{{ redis_standalone_conf_dir }}/redis.key.pass"
+redis_standalone_conf_tls_ca_cert: null
+redis_standalone_conf_tls_ca_cert_file: "{{ redis_standalone_conf_dir }}/ca_cert"
+redis_standalone_conf_tls_ca_cert_dir: null
+redis_standalone_conf_tls_protocols:
+  - TLSv1.2
+  - TLSv1.3
+redis_standalone_conf_daemonize: no
+redis_standalone_conf_loglevel: warning
+redis_standalone_conf_syslog_enabled: no
+redis_standalone_conf_databases: 16
+redis_standalone_conf_maxmemory: 100mb
+redis_standalone_conf_maxmemory_policy: noeviction
+redis_standalone_conf_always_show_logo: no
+redis_standalone_conf_saves:
+  - { seconds: 3600, changes: 1 }
+  - { seconds: 300, changes: 100 }
+  - { seconds: 60, changes: 10000 }
+redis_standalone_conf_maxclients: 1000
+redis_standalone_conf_appendonly: no
+redis_standalone_conf_appendfilename: appendonly.aof
+redis_standalone_conf_appenddirname: appendonlydir
+redis_standalone_conf_appendfsync: everysec
+redis_standalone_conf_locale_collate: "{{ lookup('env', 'LANG') | default('') | split('.') | first }}"
+
+redis_standalone_service_type: "{{ ansible_service_mgr }}"
+redis_standalone_service_name: "{{ redis_standalone_name }}.service"

@@ -1,0 +1,50 @@
+---
+
+- name: setup systemd service for redis
+  block:
+    - name: deploy redis service
+      template:
+        src: "systemd/redis-standalone.service"
+        dest: "{{ systemd_system_lib_dir }}/{{ redis_standalone_service_name }}"
+        owner: root
+        group: root
+        mode: "0644"
+      register: t_redis_standalone_service_deploy
+
+    - name: enable redis service
+      service:
+        name: "{{ redis_standalone_service_name }}"
+        daemon_reload: yes
+        masked: no
+        enabled: yes
+        state: started
+
+    - name: restart redis service on change
+      service:
+        name: "{{ redis_standalone_service_name }}"
+        state: restarted
+      when: t_redis_standalone_conf_deploy.changed or t_redis_standalone_service_deploy.changed
+
+  when: redis_standalone_service_type == 'systemd'
+
+
+
+- name: setup daemontools service for redis
+  block:
+    - fail:
+        msg: "not implemented"
+
+  when:
+    - redis_standalone_service_type == 'daemontools'
+    - has_daemontools|d(false)
+
+
+
+- name: setup rc.d service for redis
+  block:
+    - fail:
+        msg: "not implemented"
+
+  when:
+    - redis_standalone_service_type == 'bsdinit'
+    - ansible_service_mgr == 'bsdinit'
