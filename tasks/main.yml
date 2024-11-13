@@ -21,3 +21,7 @@
     - include_tasks: service_redis.yml
 
   when: want_redis_standalone
+
+- name: set has_redis_standalone
+  set_fact:
+    has_redis_standalone: "{{ want_redis_standalone }}"
